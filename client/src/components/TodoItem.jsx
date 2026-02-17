@@ -9,7 +9,7 @@ const TodoItem = ({ todo, onDelete, onEdit, onToggle }) => {
           <input
             type="checkbox"
             checked={todo.completed}
-            onChange={() => onToggle(todo.id)}
+            onChange={() => onToggle(todo._id)}
             className="peer w-6 h-6 text-blue-600 rounded-md border-gray-300 focus:ring-blue-500 cursor-pointer transition-all duration-200"
           />
         </div>
@@ -25,14 +25,14 @@ const TodoItem = ({ todo, onDelete, onEdit, onToggle }) => {
       <div className="flex flex-col items-end space-y-1">
         <div className="flex items-center space-x-3 mb-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
           <button
-            onClick={() => onEdit(todo.id)}
+            onClick={() => onEdit(todo._id)}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200"
             title="Edit"
           >
             <FaPencilAlt size={14} />
           </button>
           <button
-            onClick={() => onDelete(todo.id)}
+            onClick={() => onDelete(todo._id)}
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all duration-200"
             title="Delete"
           >
@@ -42,7 +42,13 @@ const TodoItem = ({ todo, onDelete, onEdit, onToggle }) => {
         
         <div className="flex items-center text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
           <FaClock className="mr-1.5 text-orange-400" size={10} />
-          <span>{todo.date || '28th Jun 2020'}</span>
+          <span>
+            {new Date(todo.dueDate || todo.createdAt || Date.now()).toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </span>
         </div>
       </div>
     </li>

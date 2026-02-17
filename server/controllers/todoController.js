@@ -18,7 +18,7 @@ export const getTodos = async (req, res, next) => {
 // @access  Public
 export const createTodo = async (req, res, next) => {
   try {
-    const { text } = req.body;
+    const { text, dueDate } = req.body;
 
     if (!text) {
       res.status(400);
@@ -27,6 +27,7 @@ export const createTodo = async (req, res, next) => {
 
     const todo = await Todo.create({
       text,
+      dueDate,
     });
 
     res.status(201).json(todo);

@@ -71,9 +71,23 @@ Ensure you have the following installed including:
 
 ## 🔌 API Endpoints
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
 | `GET` | `/api/todos` | Fetch all todos |
 | `POST` | `/api/todos` | Create a new todo |
 | `PUT` | `/api/todos/:id` | Update a todo |
 | `DELETE` | `/api/todos/:id` | Delete a todo |
+
+## 🌟 New Features
+- **Due Dates**: Set due dates for your todos with an integrated date picker.
+- **Filtering**: Filter todos by "All", "Completed", or "Active".
+- **Sorting**: Sort todos by "Added Date" or "Due Date".
+- **Error Handling**: Graceful UI alerts for API errors.
+
+## 🤝 Contributing
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+Distributed under the ISC License. See `LICENSE` for more information.

@@ -13,6 +13,9 @@ const todoSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  dueDate: {
+    type: Date,
+  },
 });
 
 export default mongoose.model('Todo', todoSchema);
