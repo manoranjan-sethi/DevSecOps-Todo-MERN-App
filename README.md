@@ -61,7 +61,7 @@ Ensure you have the following installed including:
 ├── package.json       # Root configuration (Workspaces + Scripts)
 ├── client/            # React Frontend
 │   ├── src/           # Components and styles
-│   └── ...
+│   └── services/      # API Services
 └── server/            # Express Backend
     ├── models/        # Mongoose Models
     ├── routes/        # API Routes
