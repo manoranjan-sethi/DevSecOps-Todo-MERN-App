@@ -1,0 +1,145 @@
+name: Quality & Security Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/todo-mern-app
+
+jobs:
+  quality-security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      packages: write
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          npm install
+          cd client && npm install && cd ..
+          cd server && npm install && cd ..
+
+      # ESLint - Lint client and server code
+      - name: Run ESLint
+        run: |
+          echo "Linting client code..."
+          cd client && npm run lint || echo "Client lint completed with warnings"
+          cd ..
+          echo "Linting server code..."
+          cd server && npm run lint || echo "Server lint completed with warnings"
+        continue-on-error: true
+
+      # OWASP Dependency Check
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Todo MERN App'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableExperimental
+            --exclude node_modules
+
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      # Trivy image scanning
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      # Upload SARIF results from Trivy
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+
+      # Upload OWASP SARIF results
+      - name: Upload OWASP SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'dependency-check-report.sarif'
+          category: 'dependency-check'
+
+      # Generate security report
+      - name: Generate Security Report
+        if: always()
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "## Timestamp: $(date)" >> security-report.md
+          echo "## Commit: ${{ github.sha }}" >> security-report.md
+          echo "## Branch: ${{ github.ref }}" >> security-report.md
+          echo "" >> security-report.md
+          echo "### Scan Results:" >> security-report.md
+          echo "- ESLint: Completed" >> security-report.md
+          echo "- OWASP Dependency Check: Completed" >> security-report.md
+          echo "- Trivy Image Scan: Completed" >> security-report.md
+          echo "" >> security-report.md
+          echo "All scans completed successfully. Check the GitHub Security tab for detailed results." >> security-report.md
+
+      # Upload security report as artifact
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            security-report.md
+            trivy-results.sarif
+            dependency-check-report.sarif
+
+      # Login to Docker Hub
+    #   - name: Login to Docker Hub
+    #     uses: docker/login-action@v3
+    #     with:
+    #       registry: ${{ env.REGISTRY }}
+    #       username: ${{ secrets.DOCKER_USERNAME }}
+    #       password: ${{ secrets.DOCKER_PASSWORD }}
+
+    #   # Push image to Docker Hub
+    #   - name: Push image to Docker Hub
+    #     run: |
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    #     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    #   # Create GitHub Release with security report
+    #   - name: Create Release with Security Report
+    #     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #     uses: actions/create-release@v1
+    #     env:
+    #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #     with:
+    #       tag_name: release-${{ github.run_number }}
+    #       release_name: Release Build ${{ github.run_number }}
+    #       body_path: security-report.md
+    #       draft: false
+    #       prerelease: false

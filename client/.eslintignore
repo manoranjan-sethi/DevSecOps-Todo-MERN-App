@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+*.log
+.env
+.env.local
+.env.*.local
+coverage/
+.DS_Store
+/out/
+dist-ssr/
+*.local
