@@ -12,6 +12,7 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 // Connect to MongoDB
+/* eslint-disable no-console */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log(`MongoDB Connected: ${mongoose.connection.host}`))
@@ -19,6 +20,7 @@ mongoose
     console.error(`Error connecting to MongoDB: ${err.message}`);
     process.exit(1);
   });
+/* eslint-enable no-console */
 
 // Middleware
 app.use(helmet());
@@ -33,6 +35,7 @@ app.use(express.json());
 app.use('/api/todos', todoRoutes);
 
 // Error Handler Middleware
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode ? res.statusCode : 500;
 
@@ -44,4 +47,5 @@ app.use((err, req, res, next) => {
   });
 });
 
+// eslint-disable-next-line no-console
 app.listen(port, () => console.log(`Server started on port ${port}`));
