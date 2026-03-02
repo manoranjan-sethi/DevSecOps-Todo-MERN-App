@@ -6,13 +6,13 @@ on:
   pull_request:
     branches: [ main, develop ]
 
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/todo-mern-app
-
 jobs:
   quality-security:
     runs-on: ubuntu-latest
+    env:
+      REGISTRY: docker.io
+      IMAGE_NAME_CLIENT: ${{ secrets.DOCKER_USERNAME }}/todo-mern-client
+      IMAGE_NAME_SERVER: ${{ secrets.DOCKER_USERNAME }}/todo-mern-server
     permissions:
       contents: read
       security-events: write
@@ -29,13 +29,14 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
 
       # Install dependencies
       - name: Install dependencies
         run: |
           npm install
-          cd client && npm install && cd ..
-          cd server && npm install && cd ..
+          cd client && npm ci && cd ..
+          cd server && npm ci && cd ..
 
       # ESLint - Lint client and server code
       - name: Run ESLint
@@ -58,32 +59,53 @@ jobs:
             --enableExperimental
             --exclude node_modules
 
-      # Build Docker image
-      - name: Build Docker image
+      # Build Docker images
+      - name: Build Client Docker image
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:${{ github.sha }} ./client
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:latest
 
-      # Trivy image scanning
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Build Server Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:${{ github.sha }} ./server
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:latest
+      # Trivy image scanning - Client
+      - name: Run Trivy vulnerability scanner on Client
+        uses: aquasecurity/trivy-action@master # Consider changing to a specific tag e.g. @0.28.0 for production
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:${{ github.sha }}
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-client-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      # Upload SARIF results from Trivy
-      - name: Upload Trivy SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+      # Upload SARIF results from Trivy - Client
+      - name: Upload Trivy Client SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'trivy'
+          sarif_file: 'trivy-client-results.sarif'
+          category: 'trivy-client'
+
+      # Trivy image scanning - Server
+      - name: Run Trivy vulnerability scanner on Server
+        uses: aquasecurity/trivy-action@master # Consider changing to a specific tag e.g. @0.28.0 for production
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-server-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      # Upload SARIF results from Trivy - Server
+      - name: Upload Trivy Server SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-server-results.sarif'
+          category: 'trivy-server'
 
       # Upload OWASP SARIF results
       - name: Upload OWASP SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'dependency-check-report.sarif'
@@ -113,7 +135,8 @@ jobs:
           name: security-reports
           path: |
             security-report.md
-            trivy-results.sarif
+            trivy-client-results.sarif
+            trivy-server-results.sarif
             dependency-check-report.sarif
 
       # Login to Docker Hub
@@ -124,11 +147,13 @@ jobs:
     #       username: ${{ secrets.DOCKER_USERNAME }}
     #       password: ${{ secrets.DOCKER_PASSWORD }}
 
-    #   # Push image to Docker Hub
-    #   - name: Push image to Docker Hub
+    #   # Push images to Docker Hub
+    #   - name: Push images to Docker Hub
     #     run: |
-    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:${{ github.sha }}
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:latest
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:${{ github.sha }}
+    #       docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_SERVER }}:latest
     #     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     #   # Create GitHub Release with security report
