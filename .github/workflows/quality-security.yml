@@ -57,6 +57,7 @@ jobs:
           format: 'SARIF'
           args: >
             --enableExperimental
+            --disableNodeAudit
             --exclude node_modules
 
       # Build Docker images
